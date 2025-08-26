@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: kyskfilms-postgres
+    environment:
+      POSTGRES_DB: kyskfilms_db
+      POSTGRES_USER: kysk_user
+      POSTGRES_PASSWORD: your_secure_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kyskfilms-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.5
+    container_name: kyskfilms-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin123
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: keycloak_user
+      KC_DB_PASSWORD: keycloak_password
+    ports:
+      - "8080:8080"
+    command:
+      - start-dev
+      - --import-realm
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    depends_on:
+      - postgres
+    networks:
+      - kyskfilms-network
+
+  keycloak-db:
+    image: postgres:15
+    container_name: kyskfilms-keycloak-db
+    environment:
+      POSTGRES_DB: keycloak_db
+      POSTGRES_USER: keycloak_user
+      POSTGRES_PASSWORD: keycloak_password
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    networks:
+      - kyskfilms-network
+
+volumes:
+  postgres_data:
+  keycloak_postgres_data:
+
+networks:
+  kyskfilms-network:
+    driver: bridge
