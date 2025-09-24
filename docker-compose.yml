@@ -49,6 +49,29 @@ services:
     networks:
       - kyskfilms-network
 
+  app:
+    build: .
+    container_name: kyskfilms-backend
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/kyskfilms_db
+      SPRING_DATASOURCE_USERNAME: kysk_user
+      SPRING_DATASOURCE_PASSWORD: your_secure_password
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/kyskfilms
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/kyskfilms/protocol/openid-connect/certs
+      KEYCLOAK_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: kyskfilms
+      KEYCLOAK_RESOURCE: kyskfilms-backend
+      JWT_SECRET: change_me_to_a_very_long_and_secure_secret_key_at_least_32chars_long_please
+    depends_on:
+      - postgres
+      - keycloak
+    networks:
+      - kyskfilms-network
+
 volumes:
   postgres_data:
   keycloak_postgres_data:

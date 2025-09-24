@@ -3,10 +3,10 @@ spring:
     name: kyskfilms-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/kyskfilms_db
-    username: kysk_user
-    password: ${DB_PASSWORD:your_secure_password}
-    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/kyskfilms_db}
+    username: ${SPRING_DATASOURCE_USERNAME:kysk_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:your_secure_password}}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.postgresql.Driver}
 
   jpa:
     hibernate:
@@ -25,18 +25,18 @@ spring:
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/kyskfilms/protocol/openid-connect/certs}
 
 server:
-  port: 8081
+  port: ${SERVER_PORT:8081}
 
 jwt:
   secret: ${JWT_SECRET:YourVeryLongAndSecureSecretKeyThatShouldBeAtLeast256BitsLong}
   expiration: 86400000 # 24 hours
 
 keycloak:
-  realm: kyskfilms
+  realm: ${KEYCLOAK_REALM:kyskfilms}
   auth-server-url: ${KEYCLOAK_SERVER_URL:http://localhost:8080}
-  ssl-required: external
-  resource: kyskfilms-backend
-  verify-token-audience: true
+  ssl-required: ${KEYCLOAK_SSL_REQUIRED:external}
+  resource: ${KEYCLOAK_RESOURCE:kyskfilms-backend}
+  verify-token-audience: ${KEYCLOAK_VERIFY_AUDIENCE:true}
 
 logging:
   level:

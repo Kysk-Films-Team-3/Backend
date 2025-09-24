@@ -1,31 +1,37 @@
 # syntax=docker/dockerfile:1
 
-FROM eclipse-temurin:21-jdk as build
+FROM eclipse-temurin:17-jdk as build
 
 WORKDIR /app
 
-# Копируем gradle wrapper и скрипты сборки
-COPY . .
+# Копируем файлы сборки и зависимости для кеширования
+COPY gradlew .
+COPY gradle gradle
+COPY settings.gradle.kts build.gradle.kts ./
 
-# Собираем проект с активным профилем developer
-RUN ./gradlew clean build -Dspring.profiles.active=developer -x test
+# Делаем gradlew исполняемым и устраняем возможные CRLF
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
 
-# Диагностика: покажем, что реально собрано
-RUN ls -l api/build/libs/ && ls -l jobs/build/libs/
+# Предзагрузка зависимостей
+RUN ./gradlew --no-daemon dependencies > /dev/null || true
 
-RUN mkdir jars && \
-    API_JAR=$(ls api/build/libs/*-boot.jar 2>/dev/null || ls api/build/libs/*.jar 2>/dev/null | head -n 1) && \
-    JOBS_JAR=$(ls jobs/build/libs/*-boot.jar 2>/dev/null || ls jobs/build/libs/*.jar 2>/dev/null | head -n 1) && \
-    [ -n "$API_JAR" ] && cp "$API_JAR" jars/api.jar || (echo "api.jar not found!" && exit 1) && \
-    [ -n "$JOBS_JAR" ] && cp "$JOBS_JAR" jars/jobs.jar || (echo "jobs.jar not found!" && exit 1)
+# Копируем исходники и ресурсы
+COPY src src
 
-FROM eclipse-temurin:21-jdk as runtime
+# Собираем bootJar без тестов
+RUN ./gradlew --no-daemon clean bootJar -x test
+
+
+FROM eclipse-temurin:17-jdk as runtime
 RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-COPY --from=build /app/jars ./jars
-COPY docker-entrypoint.sh .
+# Копируем итоговый JAR
+COPY --from=build /app/build/libs/*.jar /app/app.jar
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
-EXPOSE 9040 9045
+EXPOSE 8081
 
-ENTRYPOINT ["bash", "docker-entrypoint.sh"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
