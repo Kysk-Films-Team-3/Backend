@@ -1,0 +1,56 @@
+{
+  "realm": "kyskfilms",
+  "enabled": true,
+  "displayName": "KYSKFilms",
+
+  "roles": {
+    "realm": [
+      {"name": "USER", "description": "Regular user"},
+      {"name": "ADMIN", "description": "Administrator"}
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "kyskfilms-frontend",
+      "name": "KYSKFilms Frontend",
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "webOrigins": ["http://localhost:3000", "http://localhost:3001"],
+      "redirectUris": ["http://localhost:3000/*", "http://localhost:3001/*"],
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "kyskfilms-backend",
+      "name": "KYSKFilms Backend",
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    }
+  ],
+
+  "users": [
+    {
+      "username": "admin@kyskfilms.com",
+      "email": "admin@kyskfilms.com",
+      "firstName": "Admin",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [{"type": "password", "value": "admin123", "temporary": false}],
+      "realmRoles": ["USER", "ADMIN"]
+    },
+    {
+      "username": "user@kyskfilms.com",
+      "email": "user@kyskfilms.com",
+      "firstName": "Test",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [{"type": "password", "value": "user123", "temporary": false}],
+      "realmRoles": ["USER"]
+    }
+  ]
+}

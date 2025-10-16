@@ -1,0 +1,106 @@
+spring:
+  application:
+    name: kyskfilms-backend
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/kyskfilms_db}
+    username: ${SPRING_DATASOURCE_USERNAME:kysk_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:your_secure_password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/kyskfilms}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/kyskfilms/protocol/openid-connect/certs}
+
+server:
+  port: ${SERVER_PORT:8081}
+  error:
+    include-message: always
+    include-binding-errors: always
+  servlet:
+    context-path: /
+
+# Централизованная конфигурация Keycloak
+keycloak:
+  realm: ${KEYCLOAK_REALM:kyskfilms}
+  auth-server-url: ${KEYCLOAK_AUTH_SERVER_URL:http://localhost:8080}
+  client-id: ${KEYCLOAK_CLIENT_ID:kyskfilms-backend}
+  bearer-only: true
+  cors: true
+  cors-max-age: 1000
+  cors-allowed-methods: POST, PUT, DELETE, GET, OPTIONS, PATCH
+  cors-allowed-headers: "*"
+
+# MinIO configuration
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin123}
+  bucket: ${MINIO_BUCKET:kyskfilms}
+  region: ${MINIO_REGION:us-east-1}
+
+# Frontend configuration
+app:
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:3000}
+    allowed-origins: ${FRONTEND_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:4200}
+
+# Logging
+logging:
+  level:
+    com.kyskfilms: ${LOG_LEVEL_APP:INFO}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:INFO}
+    org.springframework.security.oauth2: ${LOG_LEVEL_OAUTH:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Swagger/OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    oauth:
+      client-id: ${keycloak.client-id}
+      realm: ${keycloak.realm}
+      scopes: openid profile email
+    try-it-out-enabled: true
+    filter: true
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true

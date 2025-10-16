@@ -1,0 +1,136 @@
+services:
+  # ============ DATABASE ============
+  postgres:
+    image: postgres:15-alpine
+    container_name: kyskfilms-postgres
+    environment:
+      POSTGRES_DB: kyskfilms_db
+      POSTGRES_USER: kysk_user
+      POSTGRES_PASSWORD: your_secure_password_change_me
+      PGTZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kysk_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kyskfilms-network
+    restart: unless-stopped
+    command: postgres -c timezone=UTC
+
+  # ============ MINIO ============
+  minio:
+    image: minio/minio:latest
+    container_name: kyskfilms-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123_change_me
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - kyskfilms-network
+    restart: unless-stopped
+
+  # ============ KEYCLOAK ============
+  keycloak:
+    image: keycloak/keycloak:24.0.0
+    container_name: kyskfilms-keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/kyskfilms_db
+      KC_DB_USERNAME: kysk_user
+      KC_DB_PASSWORD: your_secure_password_change_me
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin_secure_pass_change_me
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_LOG_LEVEL: info
+    command: start-dev
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./keycloak/import:/keycloak/import:ro
+      - ./keycloak/themes:/opt/keycloak/themes:ro
+    networks:
+      - kyskfilms-network
+    restart: unless-stopped
+
+  # ============ KEYCLOAK INIT ============
+  keycloak-init:
+    image: alpine:latest
+    container_name: kyskfilms-keycloak-init
+    depends_on:
+      keycloak:
+        condition: service_started
+    volumes:
+      - ./keycloak/init-keycloak.sh:/init-keycloak.sh:ro
+      - ./keycloak/import:/keycloak/import:ro
+    entrypoint: sh /init-keycloak.sh
+    networks:
+      - kyskfilms-network
+    restart: "no"
+
+  # ============ BACKEND ============
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kyskfilms-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_OPTS: "-Xmx1024m -Xms512m"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/kyskfilms_db
+      SPRING_DATASOURCE_USERNAME: kysk_user
+      SPRING_DATASOURCE_PASSWORD: your_secure_password_change_me
+      KEYCLOAK_AUTH_SERVER_URL: http://keycloak:8080
+      KEYCLOAK_REALM: kyskfilms
+      KEYCLOAK_CLIENT_ID: kyskfilms-backend
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/kyskfilms
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/kyskfilms/protocol/openid-connect/certs
+      MINIO_URL: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123_change_me
+      MINIO_BUCKET: kyskfilms
+      MINIO_REGION: us-east-1
+      FRONTEND_URL: http://localhost:3000
+      FRONTEND_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001,https://kyskfilms.com"
+    ports:
+      - "8082:8081"
+    depends_on:
+      keycloak-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - kyskfilms-network
+    restart: on-failure:3
+
+volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  kyskfilms-network:
+    driver: bridge
