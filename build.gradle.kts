@@ -84,5 +84,5 @@ tasks.withType<Test> {
 
 tasks.bootJar {
     archiveFileName.set("kyskfilms-backend.jar")
-    mainClass.set("com.kyskfilms.KyskfilmsApplicationKt")
+    mainClass.set("com.kyskfilms.KyskfilmsBackendApplicationKt")
 }

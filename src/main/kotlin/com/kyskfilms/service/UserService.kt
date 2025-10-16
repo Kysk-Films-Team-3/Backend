@@ -3,6 +3,7 @@ package com.kyskfilms.service
 import com.kyskfilms.dto.CreateUserDto
 import com.kyskfilms.dto.UpdateUserDto
 import com.kyskfilms.dto.UserDto
+import com.kyskfilms.entity.SubscriptionType
 import com.kyskfilms.entity.User
 import com.kyskfilms.exception.ResourceNotFoundException
 import com.kyskfilms.repository.UserRepository
@@ -50,7 +51,7 @@ class UserService(private val userRepository: UserRepository) {
         updateUserDto.firstName?.let { existingUser.firstName = it }
         updateUserDto.lastName?.let { existingUser.lastName = it }
         updateUserDto.profilePicture?.let { existingUser.profilePicture = it }
-        updateUserDto.subscriptionType?.let { existingUser.subscriptionType = it }
+        updateUserDto.subscriptionType?.let { existingUser.subscriptionType = it as SubscriptionType }
 
         return userRepository.save(existingUser).toDto()
     }
@@ -68,6 +69,8 @@ class UserService(private val userRepository: UserRepository) {
         firstName = firstName,
         lastName = lastName,
         profilePicture = profilePicture,
-        subscriptionType = subscriptionType
+        subscriptionType = subscriptionType,
+        keycloakId = TODO(),
+        createdAt = TODO()
     )
 }

@@ -10,12 +10,16 @@ class KeycloakConfig
 
 @ConfigurationProperties(prefix = "keycloak")
 data class KeycloakProperties(
-    val realm: String = "kyskfilms",
-    val authServerUrl: String = "http://localhost:8080",
-    val clientId: String = "kyskfilms-backend",
-    val bearerOnly: Boolean = true,
-    val cors: Boolean = true,
-    val corsMaxAge: Int = 1000,
-    val corsAllowedMethods: String = "POST, PUT, DELETE, GET, OPTIONS, PATCH",
-    val corsAllowedHeaders: String = "*"
-)
+    var realm: String = "kyskfilms",
+    var authServerUrl: String = "http://localhost:8080",
+    var clientId: String = "kyskfilms-backend",
+    var bearerOnly: Boolean = true,
+    var cors: Boolean = true,
+    var corsMaxAge: Int = 1000,
+    var corsAllowedMethods: String = "POST,PUT,DELETE,GET,OPTIONS,PATCH",
+    var corsAllowedHeaders: String = "*"
+){
+    fun getIssuerUri(): String = "$authServerUrl/realms/$realm"
+    fun getJwkSetUri(): String = "$authServerUrl/realms/$realm/protocol/openid-connect/certs"
+    fun getUserInfoUri(): String = "$authServerUrl/realms/$realm/protocol/openid-connect/userinfo"
+}

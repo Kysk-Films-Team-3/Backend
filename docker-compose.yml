@@ -58,6 +58,7 @@ services:
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_ENABLED: "true"
       KC_LOG_LEVEL: info
+      KC_HEALTH_ENABLED: "true"
     command: start-dev
     ports:
       - "8081:8080"
@@ -71,17 +72,22 @@ services:
       - kyskfilms-network
     restart: unless-stopped
 
-  # ============ KEYCLOAK INIT ============
+  # ============ KEYCLOAK INIT (один раз при першому запуску) ============
   keycloak-init:
-    image: alpine:latest
+    image: curlimages/curl:latest
     container_name: kyskfilms-keycloak-init
     depends_on:
       keycloak:
         condition: service_started
     volumes:
-      - ./keycloak/init-keycloak.sh:/init-keycloak.sh:ro
       - ./keycloak/import:/keycloak/import:ro
-    entrypoint: sh /init-keycloak.sh
+      - ./keycloak/keycloak-init.sh:/keycloak-init.sh:ro
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: kyskfilms
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin_secure_pass_change_me
+    entrypoint: ["/bin/sh", "/keycloak-init.sh"]
     networks:
       - kyskfilms-network
     restart: "no"
@@ -113,12 +119,14 @@ services:
     ports:
       - "8082:8081"
     depends_on:
-      keycloak-init:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       minio:
         condition: service_healthy
+      keycloak:
+        condition: service_started
+      keycloak-init:
+        condition: service_completed_successfully
     volumes:
       - ./backend/logs:/app/logs
     networks:

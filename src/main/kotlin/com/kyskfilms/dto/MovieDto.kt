@@ -30,13 +30,6 @@ data class AuthResponseDto(
     val user: UserProfileDto
 )
 
-data class UserProfileDto(
-    val id: Long,
-    val email: String,
-    val name: String?,
-    val role: String,
-    val avatar: String? = null
-)
 
 // Movie DTOs for catalog
 data class MovieCatalogDto(

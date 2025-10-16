@@ -4,55 +4,49 @@ import org.springframework.core.convert.converter.Converter
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.oauth2.jwt.Jwt
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 
-class KeycloakRoleConverter(private val clientId: String) : Converter<Jwt, Collection<GrantedAuthority>> {
-
-    private val defaultConverter = JwtGrantedAuthoritiesConverter()
+class KeycloakRoleConverter(
+    private val clientId: String
+) : Converter<Jwt, Collection<GrantedAuthority>> {
 
     override fun convert(jwt: Jwt): Collection<GrantedAuthority> {
         val authorities = mutableSetOf<GrantedAuthority>()
 
-        // Добавляем стандартные authorities (scope)
-        defaultConverter.convert(jwt)?.let { authorities.addAll(it) }
+        // Извлекаем realm roles
+        val realmRoles = extractRealmRoles(jwt)
+        authorities.addAll(realmRoles.map { SimpleGrantedAuthority("ROLE_${it.uppercase()}") })
 
-        // Извлекаем роли из realm_access
-        extractRealmRoles(jwt)?.forEach { role ->
-            authorities.add(SimpleGrantedAuthority("ROLE_${role.uppercase()}"))
-        }
-
-        // Извлекаем роли из resource_access для конкретного клиента
-        extractResourceRoles(jwt)?.forEach { role ->
-            authorities.add(SimpleGrantedAuthority("ROLE_${role.uppercase()}"))
-        }
-
-        // Добавляем username как authority для удобства
-        jwt.getClaimAsString("preferred_username")?.let {
-            authorities.add(SimpleGrantedAuthority("USER_$it"))
-        }
+        // Извлекаем client roles
+        val clientRoles = extractClientRoles(jwt, clientId)
+        authorities.addAll(clientRoles.map { SimpleGrantedAuthority("ROLE_${it.uppercase()}") })
 
         return authorities
     }
 
-    private fun extractRealmRoles(jwt: Jwt): List<String>? {
-        val realmAccess = jwt.getClaim<Map<String, Any>>("realm_access") ?: return null
+    /**
+     * Извлекает роли на уровне realm из токена
+     */
+    private fun extractRealmRoles(jwt: Jwt): Collection<String> {
+        val realmAccess = jwt.getClaim<Map<String, Any>>("realm_access") ?: return emptyList()
 
         @Suppress("UNCHECKED_CAST")
-        return (realmAccess["roles"] as? List<String>)
+        val roles = realmAccess["roles"] as? List<String> ?: return emptyList()
+
+        return roles
     }
 
-    private fun extractResourceRoles(jwt: Jwt): List<String>? {
-        val resourceAccess = jwt.getClaim<Map<String, Any>>("resource_access") ?: return null
-
-        // Используем переданный clientId или берем из токена
-        val effectiveClientId = clientId.ifEmpty {
-            jwt.getClaimAsString("azp") ?: return null
-        }
+    /**
+     * Извлекает роли на уровне клиента из токена
+     */
+    private fun extractClientRoles(jwt: Jwt, clientId: String): Collection<String> {
+        val resourceAccess = jwt.getClaim<Map<String, Any>>("resource_access") ?: return emptyList()
 
         @Suppress("UNCHECKED_CAST")
-        val clientAccess = resourceAccess[effectiveClientId] as? Map<String, Any> ?: return null
+        val clientAccess = resourceAccess[clientId] as? Map<String, Any> ?: return emptyList()
 
         @Suppress("UNCHECKED_CAST")
-        return (clientAccess["roles"] as? List<String>)
+        val roles = clientAccess["roles"] as? List<String> ?: return emptyList()
+
+        return roles
     }
 }
